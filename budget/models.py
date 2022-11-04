@@ -21,10 +21,7 @@ class BudgetCategory(TimestampModel):
 
 class Budget(TimestampModel):
     name = models.CharField(verbose_name="name", max_length=30)
-    owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-    )
+    owner = models.ManyToManyField(User, related_name="budgets")
 
     class Meta:
         verbose_name = _("budget")

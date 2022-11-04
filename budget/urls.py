@@ -4,16 +4,16 @@
 #
 # from budget.views import UserCreate
 #
-# # from craft_api import views
+# from budget import views
 # #
-# # router = routers.DefaultRouter()
-# # router.register(r"categories", views.CategoriesViewSet)
+# router = routers.DefaultRouter()
+# router.register(r"budgets", views.BudgetViewSet)
 #
 # # Wire up our API using automatic URL routing.
 # # Additionally, we include login URLs for the browsable API.
-# urlpatterns = [
-#     # path("", include(router.urls)),
-#     path("admin/", admin.site.urls),
-#     path('account/register', UserCreate.as_view()),
-#     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-# ]
+# # urlpatterns = [
+# #     # path("", include(router.urls)),
+# #     path("admin/", admin.site.urls),
+# #     path('account/register', UserCreate.as_view()),
+# #     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+# # ]
