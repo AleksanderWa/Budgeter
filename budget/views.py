@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db.models import Q
 from rest_framework import generics, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -19,4 +20,8 @@ class BudgetViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return user.budgets.all()
+        filters = Q()
+        categories = self.request.query_params.getlist("category")
+        if categories:
+            filters |= Q(**{"records__category__in": [int(category) for category in categories]})
+        return user.budgets.filter(filters).distinct()
