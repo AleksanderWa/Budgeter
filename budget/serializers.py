@@ -31,8 +31,16 @@ class BudgetRecordSerializer(serializers.ModelSerializer):
 
 
 class BudgetSerializer(serializers.ModelSerializer):
-    records = BudgetRecordSerializer(many=True)
+    records = BudgetRecordSerializer(many=True, required=False, allow_null=True)
 
     class Meta:
         model = Budget
-        fields = "__all__"
+        fields = ("id", "name", "owners", "records", "created_at", "updated_at")
+
+    def create(self, validated_data):
+        records = validated_data.pop("records", None)
+        budget = super().create(validated_data)
+        if records:
+            for record in records:
+                BudgetRecord.objects.create(budget=budget, **record)
+        return budget
