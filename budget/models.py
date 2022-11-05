@@ -21,7 +21,7 @@ class BudgetCategory(TimestampModel):
 
 class Budget(TimestampModel):
     name = models.CharField(verbose_name="name", max_length=30)
-    owner = models.ManyToManyField(User, related_name="budgets")
+    owners = models.ManyToManyField(User, related_name="budgets")
 
     class Meta:
         verbose_name = _("budget")
@@ -29,14 +29,15 @@ class Budget(TimestampModel):
 
 
 class BudgetRecord(TimestampModel):
-    income = models.DecimalField(verbose_name="income", default=0, decimal_places=2, max_digits=6)
-    expense = models.DecimalField(verbose_name="expense", default=0, decimal_places=2, max_digits=6)
-    budget = models.ForeignKey(Budget, on_delete=models.CASCADE)
-    category = models.ForeignKey(BudgetCategory, null=True, on_delete=models.PROTECT)
+    amount = models.DecimalField(verbose_name="amount", default=0, decimal_places=2, max_digits=6)
+    # expense = models.DecimalField(verbose_name="expense", default=0, decimal_places=2, max_digits=6, null=True)
+
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="records")
+    category = models.ForeignKey(BudgetCategory, null=True, on_delete=models.PROTECT, related_name="records")
 
     class Meta:
         verbose_name = _("budget record")
         verbose_name_plural = _("budget records")
 
     def __str__(self):
-        return f"+{self.income} -{self.expense}"
+        return f"+{self.amount}"
