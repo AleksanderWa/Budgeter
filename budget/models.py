@@ -30,7 +30,6 @@ class Budget(TimestampModel):
 
 class BudgetRecord(TimestampModel):
     amount = models.DecimalField(verbose_name="amount", default=0, decimal_places=2, max_digits=6)
-    # expense = models.DecimalField(verbose_name="expense", default=0, decimal_places=2, max_digits=6, null=True)
 
     budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="records")
     category = models.ForeignKey(BudgetCategory, null=True, on_delete=models.PROTECT, related_name="records")

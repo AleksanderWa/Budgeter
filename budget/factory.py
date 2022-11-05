@@ -25,6 +25,17 @@ class BudgetFactory(factory.django.DjangoModelFactory):
             for budget_record in extracted:
                 self.records.add(budget_record)
 
+    @factory.post_generation
+    def owners(self, create, extracted, **kwargs):
+        if not create:
+            # Simple build, do nothing.
+            return
+
+        if extracted:
+            # A list of groups were passed in, use them
+            for owner in extracted:
+                self.owners.add(owner)
+
 
 class CategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -44,4 +55,4 @@ class ExpenseBudgetFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = BudgetRecord
 
-    amount = factory.LazyAttribute(lambda o: faker.pyint(min_value=-10000, max_value=-2, step=-1))
+    amount = factory.LazyAttribute(lambda o: faker.pyint(min_value=-10000, max_value=-2, step=1))
