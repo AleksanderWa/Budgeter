@@ -70,14 +70,14 @@ class BudgetListTest(BaseTestCase):
         self.authorize(self.batman)
         response = self.client.get(reverse("budget-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
+        self.assertEqual(len(response.data["results"]), 3)
 
     def test_list_only_owners_budgets(self):
         self.authorize(self.star_lord)
         response = self.client.get(reverse("budget-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.vacation_budget.id)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], self.vacation_budget.id)
 
     def test_list_by_categories(self):
         expected_budget_ids = (self.business_budget.id, self.home_budget.id)
@@ -87,8 +87,8 @@ class BudgetListTest(BaseTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), len(expected_budget_ids))
-        for budget in response.data:
+        self.assertEqual(len(response.data["results"]), len(expected_budget_ids))
+        for budget in response.data["results"]:
             self.assertIn(budget["id"], expected_budget_ids)
 
 
@@ -303,8 +303,8 @@ class BudgetRecordListTest(BaseTestCase):
         response = self.client.get(reverse("budgetrecord-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(len(response.data), len(expected_records))
-        response_ids = [record["id"] for record in response.data]
+        self.assertEqual(len(response.data["results"]), len(expected_records))
+        response_ids = [record["id"] for record in response.data["results"]]
         expected_ids = [record.id for record in expected_records]
         self.assertEqual(set(response_ids), set(expected_ids))
 
@@ -317,9 +317,16 @@ class BudgetRecordListTest(BaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_ids = [record.id for record in expected_records]
-        response_ids = [record["id"] for record in response.data]
+        response_ids = [record["id"] for record in response.data["results"]]
         self.assertEqual(len(response.data), len(expected_ids))
         self.assertEqual(set(response_ids), set(expected_ids))
+
+    def test_results_are_paginated(self):
+        ExpenseBudgetFactory.create_batch(100, budget=self.business_budget, category=self.food_category)
+        self.authorize(self.batman)
+        response = self.client.get(reverse("budgetrecord-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 20)
 
 
 class BudgetRecordCreateTest(BaseTestCase):
