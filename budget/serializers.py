@@ -32,6 +32,15 @@ class BudgetRecordSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class BudgetRecordCreateSerializer(serializers.ModelSerializer):
+    category = BudgetCategorySerializer(required=False, allow_null=True)
+    budget = serializers.PrimaryKeyRelatedField(queryset=Budget.objects.all(), required=True)
+
+    class Meta:
+        model = BudgetRecord
+        fields = "__all__"
+
+
 class BudgetSerializer(serializers.ModelSerializer):
     records = BudgetRecordSerializer(many=True, required=False, allow_null=True)
     records_count = serializers.ReadOnlyField()

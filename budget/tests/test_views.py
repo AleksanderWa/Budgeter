@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
@@ -7,7 +8,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from budget.factory import BudgetFactory, CategoryFactory, ExpenseBudgetFactory, IncomeBudgetFactory
-from budget.models import Budget, BudgetCategory
+from budget.models import Budget, BudgetCategory, BudgetRecord
 
 
 class BaseTestCase(TestCase):
@@ -95,10 +96,19 @@ class BudgetCreateTest(BaseTestCase):
     def setUp(self):
         super().setUp()
 
+    def send_create_request(self, data):
+        return self.client.post(
+            reverse("budget-list"),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+
     def test_can_create_empty_budget(self):
         self.authorize(self.batman)
         name = "empty budget"
-        response = self.client.post(reverse("budget-list"), {"name": name, "owners": self.batman.id})
+        data = {"name": name, "owners": [self.batman.id]}
+        response = self.send_create_request(data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], name)
         self.assertEqual(Budget.objects.count(), 1)
@@ -112,11 +122,8 @@ class BudgetCreateTest(BaseTestCase):
             "owners": [self.batman.id],
             "records": [{"amount": "25.05"}, {"amount": "-20.12"}, {"amount": "15.00"}, {"amount": "-20.21"}],
         }
-        response = self.client.post(
-            reverse("budget-list"),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_create_request(data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], name)
         self.assertEqual(Budget.objects.count(), 1)
@@ -126,13 +133,9 @@ class BudgetCreateTest(BaseTestCase):
     def test_budget_not_created_wrong_record_data(self):
         self.authorize(self.batman)
         name = "Batman's budget"
-
         data = {"name": name, "owners": [self.batman.id], "records": [{"amount": "xxxx"}]}
-        response = self.client.post(
-            reverse("budget-list"),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_create_request(data)
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_can_create_budget_with_records_and_categories(self):
@@ -144,11 +147,8 @@ class BudgetCreateTest(BaseTestCase):
             {"amount": "-20.12", "category": {"name": "transport"}},
         ]
         data = {"name": name, "owners": [self.batman.id], "records": records}
-        response = self.client.post(
-            reverse("budget-list"),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_create_request(data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], name)
         self.assertEqual(Budget.objects.count(), 1)
@@ -165,11 +165,8 @@ class BudgetCreateTest(BaseTestCase):
             {"amount": "-20.12", "category": {"name": "food"}},
         ]
         data = {"name": name, "owners": [self.batman.id], "records": records_food_category}
-        response = self.client.post(
-            reverse("budget-list"),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_create_request(data)
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["name"], name)
         self.assertEqual(Budget.objects.count(), 1)
@@ -183,15 +180,18 @@ class BudgetUpdateTest(BaseTestCase):
         super().setUp()
         self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
 
+    def send_patch_request(self, obj_id, data):
+        return self.client.patch(
+            reverse("budget-detail", args=(obj_id,)),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+
     def test_only_owner_can_edit(self):
         self.authorize(self.star_lord)
         new_name = "new budget name"
         data = {"name": new_name}
-        response = self.client.patch(
-            reverse("budget-detail", args=(self.home_budget.id,)),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_patch_request(self.home_budget.id, data)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.home_budget.refresh_from_db()
@@ -201,11 +201,7 @@ class BudgetUpdateTest(BaseTestCase):
         self.authorize(self.batman)
         new_name = "new budget name"
         data = {"name": new_name}
-        response = self.client.patch(
-            reverse("budget-detail", args=(self.home_budget.id,)),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_patch_request(self.home_budget.id, data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.home_budget.refresh_from_db()
@@ -214,14 +210,70 @@ class BudgetUpdateTest(BaseTestCase):
     def test_can_add_another_owner(self):
         self.authorize(self.batman)
         data = {"owners": [self.batman.id, self.star_lord.id]}
-        response = self.client.patch(
-            reverse("budget-detail", args=(self.home_budget.id,)),
-            data=json.dumps(data),
-            content_type="application/json",
-        )
+        response = self.send_patch_request(self.home_budget.id, data)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.home_budget.refresh_from_db()
         self.assertEqual(set(self.home_budget.owners.values_list("id", flat=True)), {self.batman.id, self.star_lord.id})
+
+    def test_can_remove_another_owner(self):
+        self.authorize(self.batman)
+        self.home_budget.owners.add(self.star_lord)
+        self.home_budget.refresh_from_db()
+        self.assertEqual(self.home_budget.owners.count(), 2)
+
+        data = {"owners": [self.star_lord.id]}
+        response = self.send_patch_request(self.home_budget.id, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.home_budget.refresh_from_db()
+        self.assertEqual(set(self.home_budget.owners.values_list("id", flat=True)), {self.star_lord.id})
+
+
+class BudgetDeleteTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.home_incomes = IncomeBudgetFactory.create_batch(2, budget=self.home_budget, category=self.work_category)
+        self.home_expenses = ExpenseBudgetFactory.create_batch(
+            2, budget=self.home_budget, category=self.furniture_category
+        )
+
+    def send_delete_request(self, obj_id):
+        return self.client.delete(
+            reverse("budget-detail", args=(obj_id,)),
+            content_type="application/json",
+        )
+
+    def test_can_delete(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Budget.objects.filter(id=self.home_budget.id).count(), 0)
+
+    def test_only_owner_can_delete(self):
+        self.authorize(self.star_lord)
+        response = self.send_delete_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Budget.objects.filter(id=self.home_budget.id).exists(), True)
+
+    def test_records_are_deleted(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        records_ids = [record.id for record in [*self.home_expenses, *self.home_incomes]]
+        self.assertEqual(BudgetRecord.objects.filter(id__in=(records_ids)).count(), 0)
+
+    def test_category_is_not_deleted(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(BudgetCategory.objects.filter(id=self.work_category.id).exists(), True)
+        self.assertEqual(BudgetCategory.objects.filter(id=self.furniture_category.id).exists(), True)
 
 
 class BudgetRecordListTest(BaseTestCase):
@@ -268,3 +320,100 @@ class BudgetRecordListTest(BaseTestCase):
         response_ids = [record["id"] for record in response.data]
         self.assertEqual(len(response.data), len(expected_ids))
         self.assertEqual(set(response_ids), set(expected_ids))
+
+
+class BudgetRecordCreateTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+
+    def test_cant_create_without_budget(self):
+        self.authorize(self.batman)
+        response = self.client.post(reverse("budgetrecord-list"), {"amount": "-15.22"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_can_add_record_to_budget(self):
+        self.authorize(self.batman)
+        data = {"amount": "-15.22", "budget": self.home_budget.id}
+        response = self.client.post(
+            reverse("budgetrecord-list"), data=json.dumps(data), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_record = BudgetRecord.objects.get(id=response.data["id"])
+        self.assertEqual(created_record.budget, self.home_budget)
+
+
+class BudgetRecordUpdateTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.fruits = ExpenseBudgetFactory.create(amount=-30.55, budget=self.home_budget, category=self.food_category)
+
+    def send_patch_request(self, obj_id, data):
+        return self.client.patch(
+            reverse("budgetrecord-detail", args=(obj_id,)),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+
+    def test_only_owner_can_edit(self):
+        self.authorize(self.star_lord)
+        new_amount = "11.99"
+        data = {"amount": new_amount}
+        response = self.send_patch_request(self.fruits.id, data)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.fruits.refresh_from_db()
+        self.assertEqual(self.fruits.amount, Decimal("-30.55"))
+
+    def test_can_change_amount(self):
+        self.authorize(self.batman)
+        new_amount = "11.99"
+        data = {"amount": new_amount}
+        response = self.send_patch_request(self.fruits.id, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.fruits.refresh_from_db()
+        self.assertEqual(self.fruits.amount, Decimal(new_amount))
+
+
+class BudgetRecordDeleteTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.fruits = ExpenseBudgetFactory.create(amount=-30.55, budget=self.home_budget, category=self.food_category)
+
+    def send_delete_request(self, obj_id):
+        return self.client.delete(
+            reverse("budgetrecord-detail", args=(obj_id,)),
+            content_type="application/json",
+        )
+
+    def test_can_delete(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.fruits.id)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(BudgetRecord.objects.filter(id=self.fruits.id).exists(), False)
+
+    def test_only_owner_can_delete(self):
+        self.authorize(self.star_lord)
+        response = self.send_delete_request(self.fruits.id)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(BudgetRecord.objects.filter(id=self.fruits.id).exists(), True)
+
+    def test_budget_is_not_deleted(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.fruits.id)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(BudgetRecord.objects.filter(id=self.fruits.id).exists(), False)
+        self.assertEqual(Budget.objects.filter(id=self.home_budget.id).exists(), True)
+
+    def test_category_is_not_deleted(self):
+        self.authorize(self.batman)
+        response = self.send_delete_request(self.fruits.id)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(BudgetRecord.objects.filter(id=self.fruits.id).exists(), False)
+        self.assertEqual(BudgetCategory.objects.filter(id=self.food_category.id).exists(), True)

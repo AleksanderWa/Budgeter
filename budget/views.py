@@ -4,7 +4,8 @@ from rest_framework import generics, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from budget.models import Budget, BudgetRecord
-from budget.serializers import BudgetRecordSerializer, BudgetSerializer, UserSerializer
+from budget.serializers import BudgetRecordCreateSerializer, BudgetRecordSerializer, BudgetSerializer, UserSerializer
+from budget.utils import MultiSerializerViewSetMixin
 
 
 class UserCreate(generics.CreateAPIView):
@@ -19,9 +20,12 @@ class RowCountMixin:
         return queryset.annotate(items_count=Count(field))
 
 
-class BudgetRecordViewSet(viewsets.ModelViewSet):
+class BudgetRecordViewSet(MultiSerializerViewSetMixin, viewsets.ModelViewSet):
     queryset = BudgetRecord.objects.all().prefetch_related("budget__owners")
     serializer_class = BudgetRecordSerializer
+    serializer_action_classes = {
+        "create": BudgetRecordCreateSerializer,
+    }
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
@@ -53,10 +57,3 @@ class BudgetViewSet(viewsets.ModelViewSet):
     @staticmethod
     def _annotate_records_count(queryset):
         return queryset.annotate(records_count=Count("records"))
-
-    # def create(self, request, *args, **kwargs):
-    #     serializer = self.get_serializer(data=request.data.copy())
-    #     serializer.is_valid(raise_exception=True)
-    #     self.perform_create(serializer)
-    #     headers = self.get_success_headers(serializer.data)
-    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
