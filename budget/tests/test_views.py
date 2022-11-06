@@ -20,6 +20,11 @@ class BaseTestCase(TestCase):
         self.star_lord.set_password("galaxy")
         self.star_lord.save()
 
+        self.work_category = CategoryFactory(name="work")
+        self.food_category = CategoryFactory(name="food")
+        self.transport_category = CategoryFactory(name="transport")
+        self.furniture_category = CategoryFactory(name="furniture")
+
     def authorize(self, user):
         token, created = Token.objects.get_or_create(user=user)
         self.client = Client(HTTP_AUTHORIZATION="Token " + token.key)
@@ -36,10 +41,6 @@ class UserCreateTest(TestCase):
 class BudgetListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.work_category = CategoryFactory(name="work")
-        self.food_category = CategoryFactory(name="food")
-        self.transport_category = CategoryFactory(name="transport")
-        self.furniture_category = CategoryFactory(name="furniture")
 
         self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
         self.home_incomes = IncomeBudgetFactory.create_batch(2, budget=self.home_budget, category=self.work_category)
@@ -180,23 +181,44 @@ class BudgetCreateTest(BaseTestCase):
 class BudgetRecordListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.work_category = CategoryFactory(name="work")
-        self.food_category = CategoryFactory(name="food")
-        self.transport_category = CategoryFactory(name="transport")
-        self.furniture_category = CategoryFactory(name="furniture")
-
-        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman, self.star_lord])
         self.home_incomes = IncomeBudgetFactory.create_batch(2, budget=self.home_budget, category=self.work_category)
         self.home_expenses = ExpenseBudgetFactory.create_batch(
             2, budget=self.home_budget, category=self.furniture_category
+        )
+
+        self.business_budget = BudgetFactory.create(name="business", owners=[self.batman])
+        self.business_incomes = IncomeBudgetFactory.create_batch(
+            2, budget=self.business_budget, category=self.work_category
+        )
+        self.business_expenses = ExpenseBudgetFactory.create_batch(
+            2, budget=self.business_budget, category=self.food_category
         )
 
     def test_unauthorized_cant_access(self):
         response = self.client.get(reverse("budgetrecord-list"))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    # def test_simple_list_budgets(self):
-    #     self.authorize(self.batman)
-    #     response = self.client.get(reverse("budgetrecord-list"))
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(len(response.data), 3)
+    def test_simple_list_all_users_records(self):
+        expected_records = [*self.home_incomes, *self.home_expenses, *self.business_expenses, *self.business_incomes]
+        self.authorize(self.batman)
+        response = self.client.get(reverse("budgetrecord-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(len(response.data), len(expected_records))
+        response_ids = [record["id"] for record in response.data]
+        expected_ids = [record.id for record in expected_records]
+        self.assertEqual(set(response_ids), set(expected_ids))
+
+    def test_list_by_categories(self):
+        expected_records = [*self.business_expenses, *self.home_expenses]
+        self.authorize(self.batman)
+        response = self.client.get(
+            reverse("budgetrecord-list"), {"category": [self.food_category.id, self.furniture_category.id]}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_ids = [record.id for record in expected_records]
+        response_ids = [record["id"] for record in response.data]
+        self.assertEqual(len(response.data), len(expected_ids))
+        self.assertEqual(set(response_ids), set(expected_ids))

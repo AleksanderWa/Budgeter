@@ -37,7 +37,7 @@ class BudgetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Budget
-        fields = ("id", "name", "owners", "records", "created_at", "updated_at")
+        fields = ("id", "name", "owners", "records_count", "records", "created_at", "updated_at")
 
     def create(self, validated_data):
         records = validated_data.pop("records", None)
