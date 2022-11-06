@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 
 from budget.factory import BudgetFactory, CategoryFactory, ExpenseBudgetFactory, IncomeBudgetFactory
-from budget.models import Budget
+from budget.models import Budget, BudgetCategory
 
 
 class BaseTestCase(TestCase):
@@ -121,3 +121,57 @@ class BudgetCreateTest(BaseTestCase):
         self.assertEqual(Budget.objects.count(), 1)
 
         self.assertEqual(Budget.objects.get(name=name).records.count(), 4)
+
+    def test_budget_not_created_wrong_record_data(self):
+        self.authorize(self.batman)
+        name = "Batman's budget"
+
+        data = {"name": name, "owners": [self.batman.id], "records": [{"amount": "xxxx"}]}
+        response = self.client.post(
+            reverse("budget-list"),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_can_create_budget_with_records_and_categories(self):
+        self.authorize(self.batman)
+        name = "Batman's category budget"
+
+        records = [
+            {"amount": "25.05", "category": {"name": "food"}},
+            {"amount": "-20.12", "category": {"name": "transport"}},
+        ]
+        data = {"name": name, "owners": [self.batman.id], "records": records}
+        response = self.client.post(
+            reverse("budget-list"),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], name)
+        self.assertEqual(Budget.objects.count(), 1)
+
+        self.assertEqual(BudgetCategory.objects.filter(name__in=["food", "transport"]).count(), 2)
+        self.assertEqual(Budget.objects.get(name=name).records.count(), 2)
+
+    def test_not_creating_category_duplicates(self):
+        self.authorize(self.batman)
+        name = "Batman's category budget"
+
+        records_food_category = [
+            {"amount": "25.05", "category": {"name": "food"}},
+            {"amount": "-20.12", "category": {"name": "food"}},
+        ]
+        data = {"name": name, "owners": [self.batman.id], "records": records_food_category}
+        response = self.client.post(
+            reverse("budget-list"),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], name)
+        self.assertEqual(Budget.objects.count(), 1)
+
+        self.assertEqual(BudgetCategory.objects.filter(name="food").count(), 1)
+        self.assertEqual(Budget.objects.get(name=name).records.count(), 2)

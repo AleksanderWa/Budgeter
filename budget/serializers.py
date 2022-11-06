@@ -25,6 +25,8 @@ class BudgetCategorySerializer(serializers.ModelSerializer):
 
 
 class BudgetRecordSerializer(serializers.ModelSerializer):
+    category = BudgetCategorySerializer(required=False, allow_null=True)
+
     class Meta:
         model = BudgetRecord
         fields = "__all__"
@@ -42,5 +44,10 @@ class BudgetSerializer(serializers.ModelSerializer):
         budget = super().create(validated_data)
         if records:
             for record in records:
-                BudgetRecord.objects.create(budget=budget, **record)
+                budget_category = None
+                if category := record.pop("category", None):
+                    budget_category = BudgetCategory.objects.get_or_create(**category)[0]
+
+                BudgetRecord.objects.create(budget=budget, category=budget_category, **record)
+
         return budget
