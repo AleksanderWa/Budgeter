@@ -34,6 +34,7 @@ class BudgetRecordSerializer(serializers.ModelSerializer):
 
 class BudgetSerializer(serializers.ModelSerializer):
     records = BudgetRecordSerializer(many=True, required=False, allow_null=True)
+    records_count = serializers.ReadOnlyField()
 
     class Meta:
         model = Budget

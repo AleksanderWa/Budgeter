@@ -178,6 +178,52 @@ class BudgetCreateTest(BaseTestCase):
         self.assertEqual(Budget.objects.get(name=name).records.count(), 2)
 
 
+class BudgetUpdateTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+
+    def test_only_owner_can_edit(self):
+        self.authorize(self.star_lord)
+        new_name = "new budget name"
+        data = {"name": new_name}
+        response = self.client.patch(
+            reverse("budget-detail", args=(self.home_budget.id,)),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.home_budget.refresh_from_db()
+        self.assertEqual(self.home_budget.name, "home")
+
+    def test_can_edit_name(self):
+        self.authorize(self.batman)
+        new_name = "new budget name"
+        data = {"name": new_name}
+        response = self.client.patch(
+            reverse("budget-detail", args=(self.home_budget.id,)),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.home_budget.refresh_from_db()
+        self.assertEqual(self.home_budget.name, new_name)
+
+    def test_can_add_another_owner(self):
+        self.authorize(self.batman)
+        data = {"owners": [self.batman.id, self.star_lord.id]}
+        response = self.client.patch(
+            reverse("budget-detail", args=(self.home_budget.id,)),
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.home_budget.refresh_from_db()
+        self.assertEqual(set(self.home_budget.owners.values_list("id", flat=True)), {self.batman.id, self.star_lord.id})
+
+
 class BudgetRecordListTest(BaseTestCase):
     def setUp(self):
         super().setUp()
