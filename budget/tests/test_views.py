@@ -94,10 +94,6 @@ class BudgetCreateTest(BaseTestCase):
     def setUp(self):
         super().setUp()
 
-    @staticmethod
-    def get_records_data():
-        return [{"amount": "25.05"}, {"amount": "-20.12"}, {"amount": "15.00"}, {"amount": "-20.21"}]
-
     def test_can_create_empty_budget(self):
         self.authorize(self.batman)
         name = "empty budget"
@@ -110,7 +106,11 @@ class BudgetCreateTest(BaseTestCase):
         self.authorize(self.batman)
         name = "Batman's budget"
 
-        data = {"name": name, "owners": [self.batman.id], "records": self.get_records_data()}
+        data = {
+            "name": name,
+            "owners": [self.batman.id],
+            "records": [{"amount": "25.05"}, {"amount": "-20.12"}, {"amount": "15.00"}, {"amount": "-20.21"}],
+        }
         response = self.client.post(
             reverse("budget-list"),
             data=json.dumps(data),
@@ -175,3 +175,28 @@ class BudgetCreateTest(BaseTestCase):
 
         self.assertEqual(BudgetCategory.objects.filter(name="food").count(), 1)
         self.assertEqual(Budget.objects.get(name=name).records.count(), 2)
+
+
+class BudgetRecordListTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.work_category = CategoryFactory(name="work")
+        self.food_category = CategoryFactory(name="food")
+        self.transport_category = CategoryFactory(name="transport")
+        self.furniture_category = CategoryFactory(name="furniture")
+
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.home_incomes = IncomeBudgetFactory.create_batch(2, budget=self.home_budget, category=self.work_category)
+        self.home_expenses = ExpenseBudgetFactory.create_batch(
+            2, budget=self.home_budget, category=self.furniture_category
+        )
+
+    def test_unauthorized_cant_access(self):
+        response = self.client.get(reverse("budgetrecord-list"))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # def test_simple_list_budgets(self):
+    #     self.authorize(self.batman)
+    #     response = self.client.get(reverse("budgetrecord-list"))
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(len(response.data), 3)
