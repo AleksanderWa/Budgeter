@@ -21,7 +21,7 @@ class RowCountMixin:
 
 
 class BudgetRecordViewSet(MultiSerializerViewSetMixin, viewsets.ModelViewSet):
-    queryset = BudgetRecord.objects.all().prefetch_related("budget__owners")
+    queryset = BudgetRecord.objects.all().select_related("budget").prefetch_related("category")
     serializer_class = BudgetRecordSerializer
     serializer_action_classes = {
         "create": BudgetRecordCreateSerializer,
@@ -42,17 +42,18 @@ class BudgetRecordViewSet(MultiSerializerViewSetMixin, viewsets.ModelViewSet):
 
 
 class BudgetViewSet(viewsets.ModelViewSet):
-    queryset = Budget.objects.all().prefetch_related("records")
+    queryset = Budget.objects.all().prefetch_related("records__category", "owners")
     serializer_class = BudgetSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         user = self.request.user
+        queryset = super().get_queryset().filter(owners__in=(user,))
         filters = Q()
         categories = self.request.query_params.getlist("category")
         if categories:
             filters |= Q(**{"records__category__in": [int(category) for category in categories]})
-        return user.budgets.filter(filters).distinct()
+        return queryset.filter(filters).distinct()
 
     @staticmethod
     def _annotate_records_count(queryset):
