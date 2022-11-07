@@ -1,7 +1,7 @@
 # Family Budget project
 Made with **Python 3.10** and **Django 4.0**
 
-Pure backend application, serving REST API
+Pure backend application, serving REST API. For managing budgets.
 
 ### Main features:
 - Register user
@@ -12,7 +12,7 @@ Pure backend application, serving REST API
 - Update budget / records
 
 
-- All key features beside user registration are protected. User needs log in to acquire token which should be added to HTTP_AUTHORIZATION header of each request when performing any of the action listed above.
+- All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#Example requests:)
 
 ## URLS:
 - [GET, POST] /budgets
@@ -34,9 +34,9 @@ Make sure docker and docker compose are installed
 For Windows users there might be need for using winpty to run commands from build_n_run.sh
 - before each command inside build_n_run.sh put "winpty" keyword, eg. winpty docker-compose up --build -d
 
-### When application is up and running:
-Database is seeded with fixtures.
 
+When application is up and running and database is seeded with fixtures you can finally consume API
+## Example requests:
 ### Send POST request to acquire token:
 
 `curl --location --request POST '127.0.0.1:8000/api-token-auth/' --header 'Content-Type: application/json' --data-raw '{"username": "Batman", "password": "password"}'`
