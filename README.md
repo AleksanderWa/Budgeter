@@ -12,7 +12,7 @@ Pure backend application, serving REST API. For managing budgets.
 - Update budget / records
 
 
-- All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#Example requests:)
+- All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#example-requests:)
 
 ## URLS:
 - [GET, POST] /budgets
