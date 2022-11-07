@@ -10,6 +10,7 @@ Pure backend application, serving REST API. For managing budgets.
 - Create records (income, expense) for given budget
 - Delete budget / records
 - Update budget / records
+- Pagination for each endpoint set to 20 results
 - seed_db command to create fixtures
 
 
