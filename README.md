@@ -37,13 +37,17 @@ For Windows users there might be need for using winpty to run commands from buil
 
 When application is up and running and database is seeded with fixtures you can finally consume API
 ## Example requests
-### Send POST request to acquire token:
+### Send POST request to acquire token for user Batman:
 
 `curl --location --request POST '127.0.0.1:8000/api-token-auth/' --header 'Content-Type: application/json' --data-raw '{"username": "Batman", "password": "password"}'`
 
-### Example GET all user bugets request:
+### GET user's budgets:
 `curl --location --request GET '127.0.0.1:8000/budgets/' \
 --header 'Authorization: Token 37abb4b91345b0baa13bfdaa7cf3955b0bd67ccd'`
+
+### GET user's records with category id = 1 or id = 2
+`curl --location --request GET '127.0.0.1:8000/records/?category=1&category=2' \
+--header 'Authorization: Token a833ff9d8576ce151079c364b43a7712480a0854' \`
 
 You should get list of budgets - records and categories. Using Postman it should look like that:
 ![img.png](img.png)
