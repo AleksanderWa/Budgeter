@@ -36,16 +36,27 @@ For Windows users there might be need for using winpty to run commands from buil
 
 ### When application is up and running:
 Database is seeded with fixtures.
-Send POST request to acquire token:
+
+### Send POST request to acquire token:
 
 `curl --location --request POST '127.0.0.1:8000/api-token-auth/' --header 'Content-Type: application/json' --data-raw '{"username": "Batman", "password": "password"}'`
 
-Example GET all user bugets request:
+### Example GET all user bugets request:
 `curl --location --request GET '127.0.0.1:8000/budgets/' \
 --header 'Authorization: Token 37abb4b91345b0baa13bfdaa7cf3955b0bd67ccd'`
 
 You should get list of budgets - records and categories. Using Postman it should look like that:
 ![img.png](img.png)
+
+### Create budget with records example:
+`curl --location --request POST '127.0.0.1:8000/budgets/' \
+--header 'Authorization: Token 37abb4b91345b0baa13bfdaa7cf3955b0bd67ccd' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+            "name": "Family budget",
+            "owners": [1],
+            "records": [{"amount": "25.05"}, {"amount": "-20.12"}, {"amount": "15.00"}, {"amount": "-20.21"}]
+        }'`
 
 ## For developers
 Read this if you are software developer and want to run this project on your machine without using docker:
