@@ -12,7 +12,7 @@ Pure backend application, serving REST API. For managing budgets.
 - Update budget / records
 
 
-- All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#example-requests:)
+- All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#example-requests)
 
 ## URLS:
 - [GET, POST] /budgets
@@ -36,7 +36,7 @@ For Windows users there might be need for using winpty to run commands from buil
 
 
 When application is up and running and database is seeded with fixtures you can finally consume API
-## Example requests:
+## Example requests
 ### Send POST request to acquire token:
 
 `curl --location --request POST '127.0.0.1:8000/api-token-auth/' --header 'Content-Type: application/json' --data-raw '{"username": "Batman", "password": "password"}'`
