@@ -10,6 +10,7 @@ Pure backend application, serving REST API. For managing budgets.
 - Create records (income, expense) for given budget
 - Delete budget / records
 - Update budget / records
+- seed_db command to create fixtures
 
 
 - All key features beside user registration are protected. User needs to log in to acquire token which should be added to AUTHORIZATION header of each request when performing any of the action listed above. [Examples](#example-requests)
@@ -30,10 +31,18 @@ Make sure docker and docker compose are installed
 1. git clone project
 2. navigate to the main app directory
 3. run script build_n_run.sh
+   - build and run application inside container
+   - database migrations
+   - seed db
 
 For Windows users there might be need for using winpty to run commands from build_n_run.sh
 - before each command inside build_n_run.sh put "winpty" keyword, eg. winpty docker-compose up --build -d
 
+### seed_db command:
+- this will create:
+  - 2 users (Batman, Star Lord)
+  - 3 budgets
+  - 10 budget records
 
 When application is up and running and database is seeded with fixtures you can finally consume API
 ## Example requests
