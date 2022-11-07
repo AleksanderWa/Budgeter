@@ -120,7 +120,7 @@ class BudgetCreateTest(BaseTestCase):
         data = {
             "name": name,
             "owners": [self.batman.id],
-            "records": [{"amount": "25.05"}, {"amount": "-20.12"}, {"amount": "15.00"}, {"amount": "-20.21"}],
+            "records": [{"amount": "25.05"}, {"amount": "15.12"}, {"amount": "15.00"}, {"amount": "-20.21"}],
         }
         response = self.send_create_request(data)
 
@@ -173,6 +173,31 @@ class BudgetCreateTest(BaseTestCase):
 
         self.assertEqual(BudgetCategory.objects.filter(name="food").count(), 1)
         self.assertEqual(Budget.objects.get(name=name).records.count(), 2)
+
+
+class BudgetDetailTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+
+    def send_detail_request(self, obj_id):
+        return self.client.get(
+            reverse("budget-detail", args=(obj_id,)),
+            content_type="application/json",
+        )
+
+    def test_only_owner_can_get_budget(self):
+        self.authorize(self.star_lord)
+        response = self.send_detail_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_can_get_budget(self):
+        self.authorize(self.batman)
+        response = self.send_detail_request(self.home_budget.id)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.home_budget.id)
 
 
 class BudgetUpdateTest(BaseTestCase):
@@ -327,6 +352,32 @@ class BudgetRecordListTest(BaseTestCase):
         response = self.client.get(reverse("budgetrecord-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 20)
+
+
+class BudgetRecordDetailTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.home_budget = BudgetFactory.create(name="home", owners=[self.batman])
+        self.home_expense = IncomeBudgetFactory.create(budget=self.home_budget, category=self.work_category)
+
+    def send_detail_request(self, obj_id):
+        return self.client.get(
+            reverse("budgetrecord-detail", args=(obj_id,)),
+            content_type="application/json",
+        )
+
+    def test_only_owner_can_get_record(self):
+        self.authorize(self.star_lord)
+        response = self.send_detail_request(self.home_expense.id)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_can_get_budget(self):
+        self.authorize(self.batman)
+        response = self.send_detail_request(self.home_expense.id)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.home_expense.id)
 
 
 class BudgetRecordCreateTest(BaseTestCase):

@@ -68,7 +68,9 @@ Read this if you are software developer and want to run this project on your mac
 - Run django command: python manage.py seed_db to populate database
 
 
-## Running tests
+## Tests
+There are 34 views tests located in budget module.
+
 To run tests simply execute following command:
 ### Docker version:
 - docker-compose exec web python ./manage.py test --keepdb
